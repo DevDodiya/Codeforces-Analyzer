@@ -119,6 +119,68 @@
   cursor: not-allowed;
 }
 
+/* ---------- Search suggestions dropdown ---------- */
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 5px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 20px 44px -18px rgba(0, 0, 0, 0.85);
+  z-index: 50;
+  max-height: 340px;
+  overflow-y: auto;
+}
+
+.suggestion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.suggestion--active {
+  background: rgba(59, 130, 246, 0.14);
+}
+
+.suggestion__avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-2);
+  flex-shrink: 0;
+}
+
+.suggestion__handle {
+  font-weight: 700;
+  font-size: 0.92rem;
+  flex-shrink: 0;
+}
+
+.suggestion__rank {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suggestion__rating {
+  margin-left: auto;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
 /* ---------- States ---------- */
 .app__content {
   min-height: 240px;

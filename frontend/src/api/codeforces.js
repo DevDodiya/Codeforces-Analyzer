@@ -69,6 +69,26 @@ export async function getDifficultyDistribution(handle) {
   }
 }
 
+/**
+ * Autocomplete: handles (previously looked-up) starting with `query`.
+ * Backend shape: [ { handle, rating, rank, titlePhoto, avatar }, ... ]
+ * Best-effort: returns [] on any error or abort, never throws.
+ * Pass an AbortSignal to cancel a superseded in-flight request.
+ */
+export async function getSuggestions(query, signal) {
+  const q = (query || '').trim()
+  if (!q) return []
+  try {
+    const { data } = await client.get('/handles/suggest', {
+      params: { q, limit: 8 },
+      signal,
+    })
+    return Array.isArray(data) ? data : []
+  } catch {
+    return []
+  }
+}
+
 /** Converts an axios error into a human-readable message. */
 function toFriendlyMessage(err, handle) {
   // Backend returns { status: "error", message: "..." } for 4xx responses.
