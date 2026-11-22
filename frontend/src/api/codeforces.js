@@ -44,6 +44,19 @@ export async function getSolvedTags(handle) {
 }
 
 /**
+ * Fetch a handle's blog entries.
+ * Backend shape: { result: [ { id, authorHandle, title, creationTimeSeconds, rating }, ... ] }
+ */
+export async function getUserBlogs(handle) {
+  try {
+    const { data } = await client.get(`/user-blogs/${encodeURIComponent(handle)}`)
+    return Array.isArray(data?.result) ? data.result : []
+  } catch (err) {
+    throw new Error(toFriendlyMessage(err, handle))
+  }
+}
+
+/**
  * Fetch a handle's rating history (one entry per rated contest).
  * Backend shape: [ { contestId, contestName, rank, oldRating, newRating, ratingUpdateTimeSeconds }, ... ]
  */

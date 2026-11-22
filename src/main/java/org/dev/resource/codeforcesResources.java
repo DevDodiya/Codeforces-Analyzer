@@ -113,7 +113,7 @@ public class codeforcesResources {
     @Path("user-blogs/{handle}")
     @Consumes(MediaType.APPLICATION_JSON)
     public Response fetchUserBlogs(@PathParam("handle") String handle) {
-        String redisKey = "user-blogs:" + handle;
+        String redisKey = "user-blogs:v2:" + handle;
         String cached = redisDS.value(String.class).get(redisKey);
 
         if (cached != null) {

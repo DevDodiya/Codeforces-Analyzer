@@ -22,11 +22,13 @@ import StatCards from './components/StatCards'
 import RatingChart from './components/RatingChart'
 import DifficultyChart from './components/DifficultyChart'
 import TagsChart from './components/TagsChart'
+import BlogsSection from './components/BlogsSection'
 import {
   getUserInfo,
   getSolvedTags,
   getRatingHistory,
   getDifficultyDistribution,
+  getUserBlogs,
 } from './api/codeforces'
 import './App.css'
 
@@ -38,6 +40,7 @@ export default function App() {
   const [tags, setTags] = useState(null)
   const [history, setHistory] = useState(null)
   const [difficulty, setDifficulty] = useState(null)
+  const [blogs, setBlogs] = useState(null)
   const [error, setError] = useState('')
   const [lastHandle, setLastHandle] = useState('')
 
@@ -48,19 +51,22 @@ export default function App() {
     setTags(null)
     setHistory(null)
     setDifficulty(null)
+    setBlogs(null)
     setLastHandle(handle)
     try {
       // Profile is required; analytics are optional and fail independently.
-      const [data, tagData, historyData, difficultyData] = await Promise.all([
+      const [data, tagData, historyData, difficultyData, blogData] = await Promise.all([
         getUserInfo(handle),
         getSolvedTags(handle).catch(() => null),
         getRatingHistory(handle).catch(() => null),
         getDifficultyDistribution(handle).catch(() => null),
+        getUserBlogs(handle).catch(() => null),
       ])
       setUser(data)
       setTags(tagData)
       setHistory(historyData)
       setDifficulty(difficultyData)
+      setBlogs(blogData)
       setStatus('success')
     } catch (err) {
       setError(err.message)
@@ -113,6 +119,7 @@ export default function App() {
                 <DifficultyChart distribution={difficulty} />
               )}
               {tags && Object.keys(tags).length > 0 && <TagsChart tags={tags} />}
+              {blogs && blogs.length > 0 && <BlogsSection blogs={blogs} />}
               {!tags && !history && !difficulty && (
                 <p className="results__note">Analytics are unavailable for this handle right now.</p>
               )}

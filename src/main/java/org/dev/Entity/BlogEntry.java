@@ -9,6 +9,9 @@ public class BlogEntry {
     @BsonProperty("uniqueID")
     private Long id;
     private String authorHandle;
+    private String title;
+    private Long creationTimeSeconds;
+    private Integer rating;
 
     public Long getId() {
         return id;
@@ -16,5 +19,17 @@ public class BlogEntry {
 
     public String getAuthorHandle() {
         return authorHandle;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public Long getCreationTimeSeconds() {
+        return creationTimeSeconds;
+    }
+
+    public Integer getRating() {
+        return rating;
     }
 }

@@ -420,6 +420,67 @@
   font-size: 0.88rem;
 }
 
+/* ---------- Blog list ---------- */
+.blog-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.blog-item {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.blog-item:last-child {
+  border-bottom: none;
+}
+
+.blog-item__link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.blog-item__link:hover .blog-item__title {
+  color: var(--accent);
+}
+
+.blog-item__icon {
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.blog-item__title {
+  transition: color 0.15s;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blog-item__ext {
+  color: var(--text-dim);
+  flex-shrink: 0;
+}
+
+.blog-item__meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+  margin-left: 25px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+.blog-item__rating {
+  color: #19a319;
+  font-weight: 600;
+}
+
 /* ---------- Example chips (idle state) ---------- */
 .examples {
   display: flex;
