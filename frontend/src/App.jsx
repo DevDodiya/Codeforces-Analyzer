@@ -3,12 +3,15 @@ import { Loader2, SearchX, AlertCircle } from 'lucide-react'
 import Header from './components/Header'
 import SearchBar from './components/SearchBar'
 import ProfileCard from './components/ProfileCard'
-import { getUserInfo } from './api/codeforces'
+import StatCards from './components/StatCards'
+import TagsChart from './components/TagsChart'
+import { getUserInfo, getSolvedTags } from './api/codeforces'
 import './App.css'
 
 export default function App() {
   const [status, setStatus] = useState('idle') // idle | loading | success | error
   const [user, setUser] = useState(null)
+  const [tags, setTags] = useState(null)
   const [error, setError] = useState('')
   const [lastHandle, setLastHandle] = useState('')
 
@@ -16,10 +19,16 @@ export default function App() {
     setStatus('loading')
     setError('')
     setUser(null)
+    setTags(null)
     setLastHandle(handle)
     try {
-      const data = await getUserInfo(handle)
+      // Profile is required; tags are optional (don't fail the whole view if they error).
+      const [data, tagData] = await Promise.all([
+        getUserInfo(handle),
+        getSolvedTags(handle).catch(() => null),
+      ])
       setUser(data)
+      setTags(tagData)
       setStatus('success')
     } catch (err) {
       setError(err.message)
@@ -55,7 +64,19 @@ export default function App() {
             </div>
           )}
 
-          {status === 'success' && user && <ProfileCard user={user} />}
+          {status === 'success' && user && (
+            <div className="results">
+              <ProfileCard user={user} />
+              {tags && Object.keys(tags).length > 0 ? (
+                <>
+                  <StatCards tags={tags} />
+                  <TagsChart tags={tags} />
+                </>
+              ) : (
+                <p className="results__note">Tag analytics unavailable for this handle.</p>
+              )}
+            </div>
+          )}
         </div>
       </main>
     </div>

@@ -26,6 +26,23 @@ export async function getUserInfo(handle) {
   }
 }
 
+/**
+ * Fetch the map of solved-problem tags for a handle.
+ * Backend shape: { "dp": 721, "greedy": 961, ... }  (tag -> distinct problems solved)
+ * Returns the object, or throws an Error with a friendly message.
+ */
+export async function getSolvedTags(handle) {
+  try {
+    const { data } = await client.get(`/solved-tags/${encodeURIComponent(handle)}`)
+    if (!data || typeof data !== 'object') {
+      throw new Error(`No tag data found for "${handle}".`)
+    }
+    return data
+  } catch (err) {
+    throw new Error(toFriendlyMessage(err, handle))
+  }
+}
+
 /** Converts an axios error into a human-readable message. */
 function toFriendlyMessage(err, handle) {
   // Backend returns { status: "error", message: "..." } for 4xx responses.
