@@ -1,0 +1,61 @@
+# Production stack: one public URL serves everything.
+#
+#   frontend (nginx)  :80  -> serves the React SPA
+#                            -> proxies /api/* to the Quarkus backend
+#   codeforces (API)  :3000 (internal only)
+#   mongodb / redis          (internal only)
+#
+# Usage:
+#   cp .env.example .env         # set CODEFORCES_API_KEY / _SECRET
+#   docker compose -f docker-compose.prod.yml up --build -d
+#   open http://localhost        (or your server's public address)
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # SPA talks to the backend through the same-origin /api proxy
+        VITE_API_BASE_URL: /api
+    image: codeforces-frontend
+    depends_on:
+      - codeforces
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+  codeforces:
+    build:
+      context: .
+      dockerfile: src/main/docker/Dockerfile.jvm
+    image: codeforces
+    depends_on:
+      - mongodb
+      - redis
+    # No host port published — reached only via the frontend proxy.
+    # Uncomment to expose the raw API / Swagger during debugging:
+    # ports:
+    #   - "8080:3000"
+    env_file:
+      - .env
+    environment:
+      - JAVA_TOOL_OPTIONS=-Dquarkus.mongodb.connection-string=mongodb://mongodb:27017
+      - QUARKUS_REDIS_HOSTS=redis://redis:6379
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:latest
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  redis_data:

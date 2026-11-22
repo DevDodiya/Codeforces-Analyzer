@@ -116,6 +116,26 @@ Open **http://localhost:5173** and search a handle.
 
 ---
 
+## 🚀 Deployment
+
+The whole stack ships as a single public URL — nginx serves the React SPA and
+reverse-proxies `/api/*` to the Quarkus backend, so there's no CORS to wire up:
+
+```bash
+cp .env.example .env     # set CODEFORCES_API_KEY and CODEFORCES_API_SECRET
+docker compose -f docker-compose.prod.yml up --build -d
+open http://localhost    # or your server's address
+```
+
+```
+browser ──▶ frontend (nginx :80) ──/api/*──▶ codeforces (:3000) ──▶ mongodb + redis
+```
+
+Full instructions — cloud VM, HTTPS, and split static-host/API deployments — are
+in **[DEPLOY.md](DEPLOY.md)**.
+
+---
+
 ## 🧱 Project Structure
 
 ```
@@ -127,11 +147,15 @@ Codeforces-Analyzer/
 │   ├── Repository/      # MongoDB access
 │   └── Entity/          # Data models
 ├── frontend/            # React + Vite dashboard
+│   ├── Dockerfile       # Multi-stage build → nginx static serve
+│   ├── nginx.conf       # SPA routing + /api reverse proxy
 │   └── src/
 │       ├── components/  # Header, SearchBar, ProfileCard, charts, …
 │       └── api/         # Axios client + helpers
-├── docker-compose.yml   # App + MongoDB + Redis
-└── docs/screenshots/    # README images
+├── docker-compose.yml       # Dev: API + MongoDB + Redis (Swagger on :8080)
+├── docker-compose.prod.yml  # Prod: full stack behind one URL (:80)
+├── DEPLOY.md                # Deployment guide
+└── docs/screenshots/        # README images
 ```
 
 ---
