@@ -43,6 +43,32 @@ export async function getSolvedTags(handle) {
   }
 }
 
+/**
+ * Fetch a handle's rating history (one entry per rated contest).
+ * Backend shape: [ { contestId, contestName, rank, oldRating, newRating, ratingUpdateTimeSeconds }, ... ]
+ */
+export async function getRatingHistory(handle) {
+  try {
+    const { data } = await client.get(`/rating-history/${encodeURIComponent(handle)}`)
+    return Array.isArray(data) ? data : []
+  } catch (err) {
+    throw new Error(toFriendlyMessage(err, handle))
+  }
+}
+
+/**
+ * Fetch a handle's solved-problem distribution by difficulty rating.
+ * Backend shape: { "800": 12, "900": 20, ... }  (rating -> distinct problems solved)
+ */
+export async function getDifficultyDistribution(handle) {
+  try {
+    const { data } = await client.get(`/difficulty-distribution/${encodeURIComponent(handle)}`)
+    return data && typeof data === 'object' ? data : {}
+  } catch (err) {
+    throw new Error(toFriendlyMessage(err, handle))
+  }
+}
+
 /** Converts an axios error into a human-readable message. */
 function toFriendlyMessage(err, handle) {
   // Backend returns { status: "error", message: "..." } for 4xx responses.
@@ -56,6 +82,18 @@ function toFriendlyMessage(err, handle) {
     return 'Could not reach the backend. Is the server running on ' + BASE_URL + '?'
   }
   return err?.message || 'Something went wrong. Please try again.'
+}
+
+/** Problem/user rating value → Codeforces difficulty-tier colour. */
+export function difficultyColor(rating) {
+  const r = Number(rating)
+  if (!r || r < 1200) return '#9aa0a6' // newbie (gray)
+  if (r < 1400) return '#19a319' // pupil (green)
+  if (r < 1600) return '#03a89e' // specialist (cyan)
+  if (r < 1900) return '#2f6fff' // expert (blue)
+  if (r < 2100) return '#aa00aa' // candidate master (purple)
+  if (r < 2400) return '#ff8c00' // master / IM (orange)
+  return '#ff3333' // grandmaster and above (red)
 }
 
 /** Codeforces rank → colour, matching the official rating-tier palette. */
