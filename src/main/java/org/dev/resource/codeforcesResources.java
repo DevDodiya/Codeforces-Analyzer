@@ -18,14 +18,19 @@ import org.dev.Repository.CodeforcesRepository;
 import org.dev.apiSigGenerator.apiSigGenerator;
 import org.dev.proxies.getUserBlogs;
 import org.dev.proxies.getUserInfo;
+import org.dev.proxies.getUserRating;
 import org.dev.proxies.getUserSubmissions;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 @ApplicationScoped
 @Path("/")
@@ -53,7 +58,14 @@ public class codeforcesResources {
     getUserSubmissions userSubmissionsProxy;
 
     @Inject
+    @RestClient
+    getUserRating userRatingProxy;
+
+    @Inject
     RedisDataSource redisDS;
+
+    @ConfigProperty(name = "redis.cache.ttl", defaultValue = "3600")
+    long cacheTtl;
 
     @GET
     @Path("user-info/{handles}")
@@ -86,7 +98,7 @@ public class codeforcesResources {
 
             ObjectMapper mapper = new ObjectMapper();
             String json = mapper.writeValueAsString(userInfoResp);
-            redisDS.value(String.class).setex(redisKey, 5, json);
+            redisDS.value(String.class).setex(redisKey, cacheTtl, json);
 
             return Response.ok(userInfoResp).build();
         } catch (Exception e) {
@@ -125,7 +137,7 @@ public class codeforcesResources {
 
             ObjectMapper mapper = new ObjectMapper();
             String json = mapper.writeValueAsString(blogEntryResp);
-            redisDS.value(String.class).setex(redisKey, 5, json);
+            redisDS.value(String.class).setex(redisKey, cacheTtl, json);
 
             return Response.ok(blogEntryResp).build();
         } catch (Exception e) {
@@ -176,7 +188,7 @@ public class codeforcesResources {
 
             codeforcesRepository.saveTagStats(handle, tagCounts);
             String serialized = new ObjectMapper().writeValueAsString(tagCounts);
-            redisDS.value(String.class).setex(redisKey, 5, serialized);
+            redisDS.value(String.class).setex(redisKey, cacheTtl, serialized);
 
             return Response.ok(tagCounts).build();
         } catch (Exception e) {
@@ -206,6 +218,91 @@ public class codeforcesResources {
             }
 
             return Response.ok("User " + handle + " has solved " + solvedProblems.size() + " problems of difficulty " + difficulty + ".").build();
+        } catch (Exception e) {
+            return mapUpstreamError(handle, e);
+        }
+    }
+
+    @GET
+    @Path("rating-history/{handle}")
+    public Response getRatingHistory(@PathParam("handle") String handle) {
+        String redisKey = "rating-history:" + handle;
+        String cached = redisDS.value(String.class).get(redisKey);
+        if (cached != null) {
+            try {
+                List<?> list = new ObjectMapper().readValue(cached, List.class);
+                return Response.ok(list).build();
+            } catch (Exception ignored) {
+                // cache unreadable -> refetch below
+            }
+        }
+
+        try {
+            String json = userRatingProxy.getUserRating(handle);
+            JsonNode result = new ObjectMapper().readTree(json).get("result");
+
+            List<Map<String, Object>> history = new ArrayList<>();
+            if (result != null) {
+                for (JsonNode c : result) {
+                    Map<String, Object> entry = new LinkedHashMap<>();
+                    entry.put("contestId", c.path("contestId").asInt());
+                    entry.put("contestName", c.path("contestName").asText());
+                    entry.put("rank", c.path("rank").asInt());
+                    entry.put("oldRating", c.path("oldRating").asInt());
+                    entry.put("newRating", c.path("newRating").asInt());
+                    entry.put("ratingUpdateTimeSeconds", c.path("ratingUpdateTimeSeconds").asLong());
+                    history.add(entry);
+                }
+            }
+
+            String serialized = new ObjectMapper().writeValueAsString(history);
+            redisDS.value(String.class).setex(redisKey, cacheTtl, serialized);
+            return Response.ok(history).build();
+        } catch (Exception e) {
+            return mapUpstreamError(handle, e);
+        }
+    }
+
+    @GET
+    @Path("difficulty-distribution/{handle}")
+    public Response getDifficultyDistribution(@PathParam("handle") String handle) {
+        String redisKey = "difficulty-distribution:" + handle;
+        String cached = redisDS.value(String.class).get(redisKey);
+        if (cached != null) {
+            try {
+                Map<?, ?> dist = new ObjectMapper().readValue(cached, Map.class);
+                return Response.ok(dist).build();
+            } catch (Exception ignored) {
+                // cache unreadable -> refetch below
+            }
+        }
+
+        try {
+            String json = userSubmissionsProxy.getUserSubmissions(handle);
+            JsonNode result = new ObjectMapper().readTree(json).get("result");
+
+            // Group distinct solved problems by their difficulty rating (ascending).
+            Map<Integer, Set<String>> ratingToProblems = new TreeMap<>();
+            if (result != null) {
+                for (JsonNode submission : result) {
+                    if (!"OK".equals(submission.path("verdict").asText())) continue;
+                    JsonNode problem = submission.get("problem");
+                    if (problem == null || !problem.has("rating")
+                            || !problem.has("contestId") || !problem.has("index")) continue;
+                    int rating = problem.get("rating").asInt();
+                    String uniqueId = problem.get("contestId").asText() + problem.get("index").asText();
+                    ratingToProblems.computeIfAbsent(rating, k -> new HashSet<>()).add(uniqueId);
+                }
+            }
+
+            Map<String, Integer> distribution = new LinkedHashMap<>();
+            for (Map.Entry<Integer, Set<String>> e : ratingToProblems.entrySet()) {
+                distribution.put(String.valueOf(e.getKey()), e.getValue().size());
+            }
+
+            String serialized = new ObjectMapper().writeValueAsString(distribution);
+            redisDS.value(String.class).setex(redisKey, cacheTtl, serialized);
+            return Response.ok(distribution).build();
         } catch (Exception e) {
             return mapUpstreamError(handle, e);
         }
