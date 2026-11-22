@@ -65,9 +65,6 @@ public class codeforcesResources {
     getUserRating userRatingProxy;
 
     @Inject
-    org.dev.seed.HandleSeeder handleSeeder;
-
-    @Inject
     RedisDataSource redisDS;
 
     @ConfigProperty(name = "redis.cache.ttl", defaultValue = "3600")
@@ -226,69 +223,6 @@ public class codeforcesResources {
             return Response.ok("User " + handle + " has solved " + solvedProblems.size() + " problems of difficulty " + difficulty + ".").build();
         } catch (Exception e) {
             return mapUpstreamError(handle, e);
-        }
-    }
-
-    /**
-     * Manually (re)seed the handle directory from the public rated list.
-     * Autocomplete is seeded automatically on startup; this lets you refresh or
-     * top it up on demand. Returns how many handles were loaded and the new total.
-     */
-    @jakarta.ws.rs.POST
-    @Path("handles/seed")
-    public Response seedHandles(@QueryParam("limit") @DefaultValue("20000") int limit) {
-        try {
-            int capped = Math.min(Math.max(limit, 1), 60000);
-            int seeded = handleSeeder.seed(capped);
-            Map<String, Object> body = new LinkedHashMap<>();
-            body.put("status", "ok");
-            body.put("seeded", seeded);
-            body.put("total", codeforcesRepository.countHandles());
-            return Response.ok(body).build();
-        } catch (Exception e) {
-            return errorResponse(Response.Status.BAD_GATEWAY, "Could not seed handles: " + e.getMessage());
-        }
-    }
-
-    @GET
-    @Path("handles/suggest")
-    public Response suggestHandles(@QueryParam("q") String q,
-                                   @QueryParam("limit") @DefaultValue("8") int limit) {
-        String prefix = q == null ? "" : q.trim();
-        if (prefix.isEmpty()) {
-            return Response.ok(new ArrayList<>()).build();
-        }
-        int capped = Math.min(Math.max(limit, 1), 15);
-        String redisKey = "suggest:" + capped + ":" + prefix.toLowerCase();
-
-        String cached = redisDS.value(String.class).get(redisKey);
-        if (cached != null) {
-            try {
-                List<?> list = new ObjectMapper().readValue(cached, List.class);
-                return Response.ok(list).build();
-            } catch (Exception ignored) {
-                // fall through
-            }
-        }
-
-        try {
-            List<UserInfo> matches = codeforcesRepository.suggestHandles(prefix, capped);
-            List<Map<String, Object>> out = new ArrayList<>();
-            for (UserInfo u : matches) {
-                Map<String, Object> m = new LinkedHashMap<>();
-                m.put("handle", u.getHandle());
-                m.put("rating", u.getRating());
-                m.put("rank", u.getRank());
-                m.put("titlePhoto", u.getTitlePhoto());
-                m.put("avatar", u.getAvatar());
-                out.add(m);
-            }
-            String serialized = new ObjectMapper().writeValueAsString(out);
-            redisDS.value(String.class).setex(redisKey, 60, serialized);
-            return Response.ok(out).build();
-        } catch (Exception e) {
-            // Suggestions are best-effort; never break the search box.
-            return Response.ok(new ArrayList<>()).build();
         }
     }
 

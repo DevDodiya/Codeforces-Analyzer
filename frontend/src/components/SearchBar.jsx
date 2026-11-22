@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import HandleInput from './HandleInput'
+import { Search } from 'lucide-react'
 
 export default function SearchBar({ onSearch, onEdit, loading }) {
   const [value, setValue] = useState('')
@@ -10,24 +10,28 @@ export default function SearchBar({ onSearch, onEdit, loading }) {
     if (handle) onSearch(handle)
   }
 
-  const handleChange = (v) => {
-    setValue(v)
+  const onChange = (e) => {
+    setValue(e.target.value) // preserve exact case — handles are passed as typed
     onEdit?.()
   }
 
   return (
     <form className="search-bar" onSubmit={submit} autoComplete="off">
-      <HandleInput
-        value={value}
-        onChange={handleChange}
-        onPick={(h) => onSearch(h)}
-        onEnter={() => {
-          const h = value.trim()
-          if (h) onSearch(h)
-        }}
-        placeholder="Enter a Codeforces handle (e.g. tourist)"
-        autoFocus
-      />
+      <div className="search-bar__field">
+        <Search size={18} className="search-bar__icon" />
+        <input
+          className="search-bar__input"
+          type="text"
+          placeholder="Enter a Codeforces handle (e.g. tourist)"
+          value={value}
+          onChange={onChange}
+          autoFocus
+          spellCheck={false}
+          autoCapitalize="none"
+          autoCorrect="off"
+          autoComplete="off"
+        />
+      </div>
       <button className="search-bar__button" type="submit" disabled={loading || !value.trim()}>
         {loading ? 'Searching…' : 'Search'}
       </button>

@@ -20,16 +20,16 @@
 |---|---|
 | ![Profile dashboard](docs/screenshots/dashboard.jpg) | ![Rating & difficulty charts](docs/screenshots/charts.jpg) |
 
-| Smart search autocomplete | Landing |
-|---|---|
-| ![Search autocomplete](docs/screenshots/search-autocomplete.jpg) | ![Landing page](docs/screenshots/landing.jpg) |
+| Landing |
+|---|
+| ![Landing page](docs/screenshots/landing.jpg) |
 
 ---
 
 ## ✨ Features
 
 ### Frontend
-- 🔎 **Smart search with autocomplete** — debounced, abortable, client-cached handle suggestions (avatar, rank color, rating)
+- 🔎 **Instant profile search** — look up any Codeforces handle and load a full analytics dashboard
 - ⚔️ **Compare two users** — head-to-head stats with winner highlighting and an overlaid rating-over-time chart
 - 👤 **Profile card** — avatar, rank-colored handle, current/max rating, organization, country, activity
 - 📈 **Rating history** — gradient area chart across all rated contests, with per-contest tooltips and peak/current badges
@@ -44,7 +44,6 @@
 - 🔐 **Secure API signatures** — SHA-512 `apiSig` generation for authenticated Codeforces calls
 - ⚡ **Redis caching** — configurable TTL on every analytics endpoint
 - 🗄️ **MongoDB persistence** — profiles, blogs, and tag stats upserted automatically
-- 🔡 **Indexed handle autocomplete** — case-insensitive collation index + prefix range scan (no full-collection regex)
 - 🧯 **Robust error handling** — unknown handles return a clean `404` JSON body, not a raw 500
 - 🧩 **Clean REST structure** — MicroProfile REST Client proxies per Codeforces method
 
@@ -72,7 +71,6 @@
 | `GET` | `/solved-tags/{handle}` | Distinct problems solved per tag |
 | `GET` | `/solved-count/{handle}/{difficulty}` | Solved count for one difficulty |
 | `GET` | `/user-blogs/{handle}` | Blog entries (title, date, rating) |
-| `GET` | `/handles/suggest?q={prefix}` | Autocomplete suggestions from seen handles |
 
 All analytics responses are Redis-cached; unknown handles return `404` with `{ "status": "error", "message": "..." }`.
 
