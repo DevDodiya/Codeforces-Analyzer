@@ -6,13 +6,16 @@ import io.quarkus.redis.datasource.RedisDataSource;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.DefaultValue;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dev.Entity.BlogEntryResponse;
+import org.dev.Entity.UserInfo;
 import org.dev.Entity.UserInfoResponse;
 import org.dev.Repository.CodeforcesRepository;
 import org.dev.apiSigGenerator.apiSigGenerator;
@@ -220,6 +223,48 @@ public class codeforcesResources {
             return Response.ok("User " + handle + " has solved " + solvedProblems.size() + " problems of difficulty " + difficulty + ".").build();
         } catch (Exception e) {
             return mapUpstreamError(handle, e);
+        }
+    }
+
+    @GET
+    @Path("handles/suggest")
+    public Response suggestHandles(@QueryParam("q") String q,
+                                   @QueryParam("limit") @DefaultValue("8") int limit) {
+        String prefix = q == null ? "" : q.trim();
+        if (prefix.isEmpty()) {
+            return Response.ok(new ArrayList<>()).build();
+        }
+        int capped = Math.min(Math.max(limit, 1), 15);
+        String redisKey = "suggest:" + capped + ":" + prefix.toLowerCase();
+
+        String cached = redisDS.value(String.class).get(redisKey);
+        if (cached != null) {
+            try {
+                List<?> list = new ObjectMapper().readValue(cached, List.class);
+                return Response.ok(list).build();
+            } catch (Exception ignored) {
+                // fall through
+            }
+        }
+
+        try {
+            List<UserInfo> matches = codeforcesRepository.suggestHandles(prefix, capped);
+            List<Map<String, Object>> out = new ArrayList<>();
+            for (UserInfo u : matches) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("handle", u.getHandle());
+                m.put("rating", u.getRating());
+                m.put("rank", u.getRank());
+                m.put("titlePhoto", u.getTitlePhoto());
+                m.put("avatar", u.getAvatar());
+                out.add(m);
+            }
+            String serialized = new ObjectMapper().writeValueAsString(out);
+            redisDS.value(String.class).setex(redisKey, 60, serialized);
+            return Response.ok(out).build();
+        } catch (Exception e) {
+            // Suggestions are best-effort; never break the search box.
+            return Response.ok(new ArrayList<>()).build();
         }
     }
 
