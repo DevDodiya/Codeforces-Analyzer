@@ -705,9 +705,9 @@
   margin-bottom: 28px;
 }
 
-.compare-bar .search-bar__input {
-  padding-left: 14px;
+.compare-bar .search-bar__field {
   flex: 1;
+  min-width: 0;
 }
 
 .compare-bar__vs {
