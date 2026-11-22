@@ -1,5 +1,7 @@
 # 🏆 Codeforces Analyzer
 
+[![CI](https://github.com/DevDodiya/Codeforces-Analyzer/actions/workflows/ci.yml/badge.svg)](https://github.com/DevDodiya/Codeforces-Analyzer/actions/workflows/ci.yml)
+
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
 [![Quarkus](https://img.shields.io/badge/Quarkus-005CA1?style=for-the-badge&logo=quarkus&logoColor=white)](https://quarkus.io/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
@@ -131,6 +133,17 @@ Codeforces-Analyzer/
 ├── docker-compose.yml   # App + MongoDB + Redis
 └── docs/screenshots/    # README images
 ```
+
+---
+
+## 🧪 Tests & CI
+
+```bash
+./gradlew test           # backend unit tests (API signature logic)
+cd frontend && npm test  # frontend unit tests (tier/rank colour helpers)
+```
+
+Every push and pull request runs both suites plus a production build via [GitHub Actions](.github/workflows/ci.yml).
 
 ---
 
