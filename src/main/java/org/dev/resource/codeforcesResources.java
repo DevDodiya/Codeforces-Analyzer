@@ -9,6 +9,7 @@ import jakarta.ws.rs.Consumes;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
+import jakarta.ws.rs.WebApplicationException;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.dev.Entity.BlogEntryResponse;
@@ -89,7 +90,7 @@ public class codeforcesResources {
 
             return Response.ok(userInfoResp).build();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch user information: " + e.getMessage());
+            return mapUpstreamError(handles, e);
         }
     }
 
@@ -128,7 +129,7 @@ public class codeforcesResources {
 
             return Response.ok(blogEntryResp).build();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to fetch user blogs: " + e.getMessage());
+            return mapUpstreamError(handle, e);
         }
     }
 
@@ -179,7 +180,7 @@ public class codeforcesResources {
 
             return Response.ok(tagCounts).build();
         } catch (Exception e) {
-            return Response.serverError().entity("Error processing tags: " + e.getMessage()).build();
+            return mapUpstreamError(handle, e);
         }
     }
 
@@ -206,7 +207,53 @@ public class codeforcesResources {
 
             return Response.ok("User " + handle + " has solved " + solvedProblems.size() + " problems of difficulty " + difficulty + ".").build();
         } catch (Exception e) {
-            return Response.serverError().entity("Error: " + e.getMessage()).build();
+            return mapUpstreamError(handle, e);
         }
+    }
+
+    /**
+     * Maps an exception from an upstream Codeforces call to a meaningful HTTP response.
+     * - unknown handle (Codeforces 400 "...not found")  -> 404 Not Found
+     * - other Codeforces 400 (bad request)              -> 400 Bad Request
+     * - other upstream failures                         -> 502 Bad Gateway
+     * - anything else (parsing, timeouts, cache, ...)   -> 500 Internal Server Error
+     */
+    private Response mapUpstreamError(String handle, Exception e) {
+        if (e instanceof WebApplicationException wae && wae.getResponse() != null) {
+            int upstreamStatus = wae.getResponse().getStatus();
+            String comment = extractUpstreamComment(wae);
+            if (comment != null && comment.toLowerCase().contains("not found")) {
+                return errorResponse(Response.Status.NOT_FOUND,
+                        "Codeforces handle '" + handle + "' not found.");
+            }
+            if (upstreamStatus == 400) {
+                return errorResponse(Response.Status.BAD_REQUEST,
+                        comment != null ? comment : "Invalid request to Codeforces for handle '" + handle + "'.");
+            }
+            return errorResponse(Response.Status.BAD_GATEWAY,
+                    "Codeforces API error" + (comment != null ? ": " + comment : "") + ".");
+        }
+        return errorResponse(Response.Status.INTERNAL_SERVER_ERROR,
+                "Unexpected error while processing handle '" + handle + "'.");
+    }
+
+    /** Reads the "comment" field from a Codeforces error body, if present. */
+    private String extractUpstreamComment(WebApplicationException wae) {
+        try {
+            String body = wae.getResponse().readEntity(String.class);
+            if (body == null || body.isBlank()) return null;
+            JsonNode node = new ObjectMapper().readTree(body);
+            return node.has("comment") ? node.get("comment").asText() : null;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    /** Builds a consistent JSON error body: {"status":"error","message":"..."}. */
+    private Response errorResponse(Response.Status status, String message) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("status", "error");
+        body.put("message", message);
+        return Response.status(status).type(MediaType.APPLICATION_JSON).entity(body).build();
     }
 }
