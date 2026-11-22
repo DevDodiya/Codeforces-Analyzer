@@ -14,13 +14,66 @@
   z-index: 10;
 }
 
-.app-header__brand {
+.app-header__inner {
   max-width: 920px;
   margin: 0 auto;
   padding: 18px 20px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 14px;
+}
+
+.app-header__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 12px;
+  transition: opacity 0.15s ease;
+}
+
+.app-header__brand:hover {
+  opacity: 0.85;
+}
+
+.app-header__home {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.app-header__home:hover {
+  background: rgba(255, 255, 255, 0.09);
+  border-color: var(--accent);
+}
+
+@media (max-width: 520px) {
+  .app-header__subtitle {
+    display: none;
+  }
+  .app-header__home span {
+    display: none;
+  }
+  .app-header__home {
+    padding: 8px 10px;
+  }
 }
 
 .app-header__logo {

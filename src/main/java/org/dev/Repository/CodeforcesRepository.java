@@ -5,14 +5,17 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.Collation;
 import com.mongodb.client.model.CollationStrength;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.Projections;
+import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.Sorts;
+import com.mongodb.client.model.WriteModel;
 import io.quarkus.runtime.ShutdownEvent;
 import io.quarkus.runtime.StartupEvent;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -39,6 +42,7 @@ import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
 @ApplicationScoped
 public class CodeforcesRepository {
     private MongoCollection<UserInfo> userInfoCollection;
+    private MongoCollection<Document> userInfoRawCollection; // same collection, raw Document view (seeding)
     private MongoCollection<BlogEntry> blogEntryCollection;
     private MongoCollection<Document> tagStatsCollection;
     private MongoClient mongoClient;
@@ -60,6 +64,7 @@ public class CodeforcesRepository {
         MongoDatabase database = mongoClient.getDatabase("codeforces").withCodecRegistry(pojoCodecRegistry);
 
         this.userInfoCollection = database.getCollection("user_info", UserInfo.class);
+        this.userInfoRawCollection = database.getCollection("user_info");
         this.blogEntryCollection = database.getCollection("blog_entries", BlogEntry.class);
         this.tagStatsCollection = database.getCollection("tag_stats", Document.class);
 
@@ -127,6 +132,39 @@ public class CodeforcesRepository {
                 .limit(limit)
                 .into(out);
         return out;
+    }
+
+    /** Fast approximate count of stored handles — used to decide whether to seed the directory. */
+    public long countHandles() {
+        return userInfoRawCollection.estimatedDocumentCount();
+    }
+
+    /**
+     * Bulk-upsert a batch of lightweight handle documents (handle, rating, rank,
+     * titlePhoto, avatar, …) into the user_info collection. Upsert keyed on handle
+     * so it never duplicates an existing profile and is safe to re-run. Unordered
+     * so one bad row can't abort the batch. Returns the number of operations applied.
+     */
+    public int seedHandles(List<Document> handleDocs) {
+        if (handleDocs == null || handleDocs.isEmpty()) {
+            return 0;
+        }
+        List<WriteModel<Document>> ops = new ArrayList<>(handleDocs.size());
+        for (Document d : handleDocs) {
+            Object handle = d.get("handle");
+            if (handle == null) {
+                continue;
+            }
+            ops.add(new ReplaceOneModel<>(
+                    Filters.eq("handle", handle),
+                    d,
+                    new ReplaceOptions().upsert(true)));
+        }
+        if (ops.isEmpty()) {
+            return 0;
+        }
+        userInfoRawCollection.bulkWrite(ops, new BulkWriteOptions().ordered(false));
+        return ops.size();
     }
 
     public Document getTagStats(String handle) {

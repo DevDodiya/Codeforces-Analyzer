@@ -48,6 +48,30 @@ export default function App() {
   const [cmpB, setCmpB] = useState(null)
   const [cmpError, setCmpError] = useState('')
 
+  const goHome = () => {
+    setView('single')
+    setStatus('idle')
+    setUser(null)
+    setTags(null)
+    setHistory(null)
+    setDifficulty(null)
+    setBlogs(null)
+    setError('')
+    setLastHandle('')
+    setCmpStatus('idle')
+    setCmpA(null)
+    setCmpB(null)
+    setCmpError('')
+  }
+
+  // Clear a stale "not found" error as soon as the user edits the handle again.
+  const handleEdit = () => {
+    if (status === 'error') {
+      setStatus('idle')
+      setError('')
+    }
+  }
+
   const handleSearch = async (handle) => {
     setStatus('loading')
     setError('')
@@ -98,9 +122,11 @@ export default function App() {
     }
   }
 
+  const showHome = !(view === 'single' && status === 'idle')
+
   return (
     <div className="app">
-      <Header />
+      <Header onHome={goHome} showHome={showHome} />
       <main className="app__main">
         <div className="view-tabs" role="tablist">
           <button
@@ -123,7 +149,7 @@ export default function App() {
 
         {view === 'single' ? (
           <>
-            <SearchBar onSearch={handleSearch} loading={status === 'loading'} />
+            <SearchBar onSearch={handleSearch} onEdit={handleEdit} loading={status === 'loading'} />
             <div className="app__content">
               {status === 'idle' && (
                 <div className="state state--idle">

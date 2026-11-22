@@ -65,6 +65,9 @@ public class codeforcesResources {
     getUserRating userRatingProxy;
 
     @Inject
+    org.dev.seed.HandleSeeder handleSeeder;
+
+    @Inject
     RedisDataSource redisDS;
 
     @ConfigProperty(name = "redis.cache.ttl", defaultValue = "3600")
@@ -223,6 +226,27 @@ public class codeforcesResources {
             return Response.ok("User " + handle + " has solved " + solvedProblems.size() + " problems of difficulty " + difficulty + ".").build();
         } catch (Exception e) {
             return mapUpstreamError(handle, e);
+        }
+    }
+
+    /**
+     * Manually (re)seed the handle directory from the public rated list.
+     * Autocomplete is seeded automatically on startup; this lets you refresh or
+     * top it up on demand. Returns how many handles were loaded and the new total.
+     */
+    @jakarta.ws.rs.POST
+    @Path("handles/seed")
+    public Response seedHandles(@QueryParam("limit") @DefaultValue("20000") int limit) {
+        try {
+            int capped = Math.min(Math.max(limit, 1), 60000);
+            int seeded = handleSeeder.seed(capped);
+            Map<String, Object> body = new LinkedHashMap<>();
+            body.put("status", "ok");
+            body.put("seeded", seeded);
+            body.put("total", codeforcesRepository.countHandles());
+            return Response.ok(body).build();
+        } catch (Exception e) {
+            return errorResponse(Response.Status.BAD_GATEWAY, "Could not seed handles: " + e.getMessage());
         }
     }
 
